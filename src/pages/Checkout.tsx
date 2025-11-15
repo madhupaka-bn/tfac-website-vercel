@@ -63,13 +63,9 @@ const Checkout = () => {
 
   const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
   try {
-    toast.loading("Creating your order...");
 
     // Call backend to create order
     const order = await createOrder(total);
-
-    toast.dismiss();
-    toast.success("Order created! Redirecting to payment...");
 
     // 2️⃣ Razorpay Checkout (No verification now)
     const options = {
@@ -81,9 +77,17 @@ const Checkout = () => {
       handler: function (response) {
         toast.dismiss();
         setCustomerName(data.name);
-        setShowShippingForm(false);
         setShowSuccessModal(true);
         form.reset();
+      },
+      modal: {
+        ondismiss: function() {
+          // User closed Razorpay modal without completing payment
+          toast.info("Payment cancelled");
+          setShowShippingForm(true);
+        },
+        backdropclose: true,
+        escape: true,
       },
       prefill: {
         name: data.name,
@@ -91,10 +95,10 @@ const Checkout = () => {
         contact: data.phone,
       },
       notes: {
-        "Address": data.address,
-        "Size": product?.size,
-        "Product Name": product?.name,
-        "Cause":product?.cause || "",
+        address: data.address,
+        size: product?.size,
+        product_name: product?.name,
+        cause:product?.cause || "",
       },
       theme: {
         color: "#1E3A8A",
@@ -102,7 +106,26 @@ const Checkout = () => {
     };
 
     const rzp1 = new window.Razorpay(options);
-    rzp1.open();
+    
+    // Close shipping form and remove any backdrop overlays
+    setShowShippingForm(false);
+    
+    // Wait for dialog to fully close and remove backdrop
+    setTimeout(() => {
+      // Remove any lingering dialog backdrops
+      const backdrops = document.querySelectorAll('[data-radix-dialog-overlay]');
+      backdrops.forEach(backdrop => backdrop.style.display = 'none');
+      
+      rzp1.open();
+      
+      // Ensure Razorpay modal is on top and interactive
+      setTimeout(() => {
+        const razorpayContainer = document.querySelector('.razorpay-container');
+        if (razorpayContainer) {
+          razorpayContainer.style.zIndex = '9999999';
+        }
+      }, 100);
+    }, 300);
 
   } catch (err) {
     console.error(err);
