@@ -59,56 +59,56 @@ const Checkout = () => {
 
   if (!product && !cart) return null;
 
-  const onSubmit = async (data:z.infer<typeof shippingSchema>) => {
-    try {
-      toast.loading("Creating your order...");
-  
-      // Call backend (mock for now)
-      const order = await createOrder(total);
-      toast.dismiss();
-      toast.success("Order created successfully!");
-  
-      // 2 Open Razorpay checkout
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your Razorpay test key
-        amount: order.amount,
-        currency: order.currency,
-        name: "Tees for a Cause",
-        description: "T-shirt Order Payment",
-        // order_id: order.id,
-        handler: async function (response) {
-          toast.loading("Verifying payment...");
-          const verifyRes = await verifyPayment(response);
-          toast.dismiss();
-          if (verifyRes.success) {
-            toast.success("Your purchase was successful!");
-            form.reset();
-            navigate("/shop");
-          } else {
-            toast.error("Payment verification failed!");
-          }
-        },
-        prefill: {
-          name: data.name,
-          email: data.email,
-          contact: data.phone,
-        },
-        notes: {
-          address: data.address,
-        },
-        theme: {
-          color: "#1E3A8A", // match your brand
-        },
-      };
-  
-      const rzp1 = new window.Razorpay(options);
-      rzp1.open();
-  
-    } catch (err) {
-      console.error(err);
-      toast.error("Something went wrong!");
-    }
-  };
+  const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
+  try {
+    toast.loading("Creating your order...");
+
+    // Call backend to create order
+    const order = await createOrder(total);
+
+    toast.dismiss();
+    toast.success("Order created! Redirecting to payment...");
+
+    // 2️⃣ Razorpay Checkout (No verification now)
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: order.amount,
+      currency: order.currency,
+      name: "Tees for a Cause",
+      description: "T-shirt Order Payment",
+      handler: function (response) {
+        toast.dismiss();
+
+        toast.success(
+          `${data.name}, your payment is completed! You may receive an email for the order confirmation.`
+        );
+
+        form.reset();
+        navigate("/shop");
+      },
+      prefill: {
+        name: data.name,
+        email: data.email,
+        contact: data.phone,
+      },
+      notes: {
+        address: data.address,
+      },
+      theme: {
+        color: "#1E3A8A",
+      },
+    };
+
+    const rzp1 = new window.Razorpay(options);
+    rzp1.open();
+
+  } catch (err) {
+    console.error(err);
+    toast.dismiss();
+    toast.error("Something went wrong!");
+  }
+};
+
   const originalPrice = 699;
   const discount = 110;
   const finalPrice = product.price || 589;
