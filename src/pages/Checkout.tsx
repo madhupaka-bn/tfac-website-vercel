@@ -93,6 +93,9 @@ const Checkout = () => {
       },
       notes: {
         address: data.address,
+        size: product?.size,
+        product_name: product?.name,
+        cause:product?.cause || "",
       },
       theme: {
         color: "#1E3A8A",
@@ -117,6 +120,8 @@ const Checkout = () => {
   const shipping = 50;
   const subtotal = finalPrice;
   const total = subtotal + shipping;
+
+  console.log("PRODUCT", product) ; 
 
   return (
     <div className="min-h-screen">
