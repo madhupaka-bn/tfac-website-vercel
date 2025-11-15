@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* White, Black & Beige Palette */
+    --background: 0 0% 100%; /* pure white */
+    --foreground: 0 0% 10%; /* rich black text */
+
+    --card: 0 0% 100%; /* pure white card */
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 40 35% 75%; /* warm beige */
+    --primary-foreground: 0 0% 10%; /* black text for contrast */
+
+    --secondary: 40 25% 88%; /* lighter beige */
+    --secondary-foreground: 0 0% 10%; /* black text */
+
+    --muted: 40 20% 92%; /* very light beige */
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 38 40% 70%; /* medium beige accent */
+    --accent-foreground: 0 0% 10%; /* black text */
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 15% 88%; /* light beige border */
+    --input: 40 15% 90%;
+    --ring: 40 35% 65%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --glow: 40 35% 75%; /* beige glow */
+    --hover-beige: 40 40% 70%; /* hover beige */
+    --highlight-bg: 40 30% 95%; /* very light beige for highlights */
+    --highlight-border: 40 35% 75%;
+    --section-highlight-bg: 40 25% 96%; /* soft beige highlight */
+    --section-highlight-border: 40 30% 80%; /* beige border */
+    
+    --sidebar-background: 40 20% 92%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 40 35% 75%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 100%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 40 15% 85%;
+    --sidebar-ring: 40 35% 75%;
+  }
+
+  .dark {
+    --background: 0 0% 10%; /* rich black */
+    --foreground: 0 0% 95%; /* off-white */
+
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 40 30% 65%; /* darker beige for dark mode */
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 40 20% 25%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 40 35% 60%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 95%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 40 30% 65%;
+    
+    --highlight-bg: 40 25% 18%;
+    --highlight-border: 40 30% 65%;
+    --section-highlight-bg: 40 20% 15%;
+    --section-highlight-border: 40 25% 50%;
+    
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 40 30% 65%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 40 30% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body overflow-x-hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer utilities {
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px hsl(var(--glow) / 0.4);
+  }
+
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
+  /* Responsive image fixes */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Prevent overflow on mobile */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Ensure sections don't overflow */
+  section {
+    overflow-x: hidden;
+  }
+}
