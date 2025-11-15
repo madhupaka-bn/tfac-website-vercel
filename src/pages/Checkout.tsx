@@ -40,6 +40,8 @@ const Checkout = () => {
   const product = location.state?.product;
   const cart = location.state?.cart;
   const [showShippingForm, setShowShippingForm] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [customerName, setCustomerName] = useState("");
 
   const form = useForm<z.infer<typeof shippingSchema>>({
     resolver: zodResolver(shippingSchema),
@@ -78,13 +80,10 @@ const Checkout = () => {
       description: "T-shirt Order Payment",
       handler: function (response) {
         toast.dismiss();
-
-        toast.success(
-          `${data.name}, your payment is completed! You may receive an email for the order confirmation.`
-        );
-
+        setCustomerName(data.name);
+        setShowShippingForm(false);
+        setShowSuccessModal(true);
         form.reset();
-        navigate("/shop");
       },
       prefill: {
         name: data.name,
@@ -92,10 +91,10 @@ const Checkout = () => {
         contact: data.phone,
       },
       notes: {
-        address: data.address,
-        size: product?.size,
-        product_name: product?.name,
-        cause:product?.cause || "",
+        "Address": data.address,
+        "Size": product?.size,
+        "Product Name": product?.name,
+        "Cause":product?.cause || "",
       },
       theme: {
         color: "#1E3A8A",
@@ -330,6 +329,56 @@ const Checkout = () => {
               </Button>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">Order Placed Successfully! 🎉</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg 
+                  className="w-8 h-8 text-green-600" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M5 13l4 4L19 7" 
+                  />
+                </svg>
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <p className="text-lg font-semibold">
+                Thank you, {customerName}!
+              </p>
+              <p className="text-muted-foreground">
+                Your payment has been completed successfully.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You may receive an email confirmation shortly.
+              </p>
+            </div>
+
+            <Button 
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate("/shop");
+              }} 
+              className="w-full"
+            >
+              Continue Shopping
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
