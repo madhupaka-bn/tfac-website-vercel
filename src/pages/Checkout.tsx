@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { createOrder, verifyPayment } from "@/api/api.js"
+import { createOrder, verifyPayment } from "@/api/api.js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,27 @@ import {
 } from "@/components/ui/form";
 
 const shippingSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(100, "Name must be less than 100 characters"),
   email: z.string().trim().email("Invalid email address"),
-  phone: z.string().trim().min(10, "Phone number must be at least 10 digits").max(15, "Phone number must be less than 15 digits"),
-  address: z.string().trim().min(10, "Please provide a complete address").max(500, "Address must be less than 500 characters"),
-  pincode: z.string().trim().min(6, "Pincode must be at least 6 digits").max(6, "Pincode must be exactly 6 digits"),
+  phone: z
+    .string()
+    .trim()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(15, "Phone number must be less than 15 digits"),
+  address: z
+    .string()
+    .trim()
+    .min(10, "Please provide a complete address")
+    .max(500, "Address must be less than 500 characters"),
+  pincode: z
+    .string()
+    .trim()
+    .min(6, "Pincode must be at least 6 digits")
+    .max(6, "Pincode must be exactly 6 digits"),
 });
 
 const Checkout = () => {
@@ -43,6 +59,7 @@ const Checkout = () => {
   const [showShippingForm, setShowShippingForm] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof shippingSchema>>({
     resolver: zodResolver(shippingSchema),
@@ -64,105 +81,111 @@ const Checkout = () => {
   if (!product && !cart) return null;
 
   const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
-  try {
-    const orderBody = {
-      customer_name: data.name,
-      customer_email: data.email,
-      customer_phone: data.phone,
-      customer_address: data.address,
-      customer_pincode: data.pincode,
-      product_name: product.name,
-      product_size: product.size,
-      product_price: product.price,
-      product_image: product.image,
-      product_cause: product.cause,
-      order_quantity: 1,
-    };
+    try {
+      setLoading(true);
+      const orderBody = {
+        customer_name: data.name,
+        customer_email: data.email,
+        customer_phone: data.phone,
+        customer_address: data.address,
+        customer_pincode: data.pincode,
+        product_name: product.name,
+        product_size: product.size,
+        product_price: product.price,
+        product_image: product.image,
+        product_cause: product.cause,
+        order_quantity: 1,
+      };
 
-    console.log(orderBody, "ORDER BODY");
+      console.log(orderBody, "ORDER BODY");
 
-    // 1️⃣ Create Razorpay Order from Backend
-    const response = await createOrder(orderBody); // axios request
+      // 1️⃣ Create Razorpay Order from Backend
+      const response = await createOrder(orderBody); // axios request
 
-    const backendOrder = response.data.order;
-    const orderId = response.data.orderId; // DB order ID
-    const customerId = response.data.customerId;
+      const backendOrder = response.data.order;
+      const orderId = response.data.orderId; // DB order ID
+      const customerId = response.data.customerId;
 
-    console.log("BACKEND ORDER:", backendOrder);
+      console.log("BACKEND ORDER:", backendOrder);
 
-    // 2️⃣ Configure Razorpay Checkout
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: backendOrder.amount,
-      currency: backendOrder.currency,
-      name: "Tees for a Cause",
-      description: backendOrder.notes.product_name,
-      order_id: backendOrder.id, // Razorpay order_id
+      // 2️⃣ Configure Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: backendOrder.amount,
+        currency: backendOrder.currency,
+        name: "Tees for a Cause",
+        description: backendOrder.notes.product_name,
+        order_id: backendOrder.id, // Razorpay order_id
 
-      handler: async function (rzpResponse: any) {
-        console.log("PAYMENT SUCCESS:", rzpResponse);
+        handler: async function (rzpResponse: any) {
+          console.log("PAYMENT SUCCESS:", rzpResponse);
 
-        // 3️⃣ Verify payment on backend
-        await verifyPayment({ razorpay_payment_id: rzpResponse.razorpay_payment_id,
-          razorpay_order_id: rzpResponse.razorpay_order_id,
-          razorpay_signature: rzpResponse.razorpay_signature,
-          order_id: orderId }) ;// DB order id
+          // 3️⃣ Verify payment on backend
+          await verifyPayment({
+            razorpay_payment_id: rzpResponse.razorpay_payment_id,
+            razorpay_order_id: rzpResponse.razorpay_order_id,
+            razorpay_signature: rzpResponse.razorpay_signature,
+            order_id: orderId,
+          }); // DB order id
 
-        toast.dismiss();
-        setCustomerName(data.name);
-        setShowSuccessModal(true);
-        form.reset();
-      },
-
-      modal: {
-        ondismiss: function () {
-          toast.info("Payment cancelled");
-          setShowShippingForm(true);
+          toast.dismiss();
+          setCustomerName(data.name);
+          setShowSuccessModal(true);
+          setLoading(false);
+          form.reset();
         },
-        backdropclose: true,
-        escape: true,
-      },
 
-      prefill: {
-        name: data.name,
-        email: data.email,
-        contact: data.phone,
-      },
+        modal: {
+          ondismiss: function () {
+            toast.info("Payment cancelled");
+            setShowShippingForm(true);
+          },
+          backdropclose: true,
+          escape: true,
+        },
 
-      notes: backendOrder.notes,
+        prefill: {
+          name: data.name,
+          email: data.email,
+          contact: data.phone,
+        },
 
-      theme: {
-        color: "#1E3A8A",
-      },
-    };
+        notes: backendOrder.notes,
 
-    // 3️⃣ Launch Razorpay Checkout
-    const rzp1 = new window.Razorpay(options);
+        theme: {
+          color: "#1E3A8A",
+        },
+      };
 
-    // Close shipping form
-    setShowShippingForm(false);
+      // 3️⃣ Launch Razorpay Checkout
+      const rzp1 = new window.Razorpay(options);
 
-    // Ensure backdrop removed
-    setTimeout(() => {
-      const backdrops = document.querySelectorAll("[data-radix-dialog-overlay]");
-      backdrops.forEach((b: any) => (b.style.display = "none"));
+      // Close shipping form
+      setShowShippingForm(false);
 
-      rzp1.open();
-
-      // Ensure Razorpay modal appears above everything
+      // Ensure backdrop removed
       setTimeout(() => {
-        const rzpContainer = document.querySelector(".razorpay-container") as HTMLElement;
-        if (rzpContainer) rzpContainer.style.zIndex = "9999999";
-      }, 100);
-    }, 300);
+        const backdrops = document.querySelectorAll(
+          "[data-radix-dialog-overlay]"
+        );
+        backdrops.forEach((b: any) => (b.style.display = "none"));
 
-  } catch (err) {
-    console.error(err);
-    toast.dismiss();
-    toast.error("Something went wrong!");
-  }
-};
+        rzp1.open();
 
+        // Ensure Razorpay modal appears above everything
+        setTimeout(() => {
+          const rzpContainer = document.querySelector(
+            ".razorpay-container"
+          ) as HTMLElement;
+          if (rzpContainer) rzpContainer.style.zIndex = "9999999";
+        }, 100);
+      }, 300);
+    } catch (err) {
+      console.error(err);
+      toast.dismiss();
+      toast.error("Something went wrong!");
+    }
+  };
 
   const originalPrice = 699;
   const discount = 110;
@@ -173,11 +196,11 @@ const Checkout = () => {
   const subtotal = finalPrice;
   const total = subtotal + shipping;
 
-  console.log("PRODUCT", product) ; 
+  console.log("PRODUCT", product);
 
   return (
     <div className="min-h-screen">
-      <Navbar /> 
+      <Navbar />
       <section className="py-16 bg-gradient-to-br from-primary/5 to-secondary/5">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -198,28 +221,36 @@ const Checkout = () => {
 
                 <div className="border-t border-border pt-4 space-y-2">
                   <p className="text-lg">
-                    <span className="text-muted-foreground">PRICE:</span> ₹{originalPrice}
+                    <span className="text-muted-foreground">PRICE:</span> ₹
+                    {originalPrice}
                   </p>
                   <p className="text-lg">
-                    <span className="text-muted-foreground">discount:</span> ₹{discount}
+                    <span className="text-muted-foreground">discount:</span> ₹
+                    {discount}
                   </p>
                   <p className="text-xl font-bold">
-                    <span className="text-muted-foreground">final price:</span> ₹{finalPrice}
+                    <span className="text-muted-foreground">final price:</span>{" "}
+                    ₹{finalPrice}
                   </p>
                 </div>
 
                 <div className="border-t border-border pt-4 space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
-                    ₹{geetDonation} from your purchase goes to GEET (Girls Education
-                    Empowerment Trust), dedicated to building a girl child's education.
+                    ₹{geetDonation} from your purchase goes to GEET (Girls
+                    Education Empowerment Trust), dedicated to building a girl
+                    child's education.
                     <br />
-                    <span className="text-sm">Visit GEET on Instagram @GEETFOUNDATION</span>
+                    <span className="text-sm">
+                      Visit GEET on Instagram @GEETFOUNDATION
+                    </span>
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
-                    ₹{designerSupport} from your T-shirt goes to Meera Shah, empowering a young
-                    designer.
+                    ₹{designerSupport} from your T-shirt goes to Meera Shah,
+                    empowering a young designer.
                     <br />
-                    <span className="text-sm">Visit her on Instagram @meeradesigns</span>
+                    <span className="text-sm">
+                      Visit her on Instagram @meeradesigns
+                    </span>
                   </p>
                   <p className="text-lg font-semibold">
                     Your total contribution: ₹{geetDonation + designerSupport}
@@ -267,9 +298,9 @@ const Checkout = () => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  
-                  <Button 
-                    size="lg" 
+
+                  <Button
+                    size="lg"
                     className="w-full text-lg font-bold uppercase tracking-wider hover-glow"
                     onClick={() => setShowShippingForm(true)}
                   >
@@ -277,25 +308,25 @@ const Checkout = () => {
                   </Button>
 
                   <div className="flex items-center justify-center gap-6 mt-8">
-                    <a 
-                      href="https://instagram.com/geetfoundation" 
-                      target="_blank" 
+                    <a
+                      href="https://instagram.com/geetfoundation"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-primary transition-colors"
                     >
                       <Instagram className="w-6 h-6" />
                     </a>
-                    <a 
-                      href="https://facebook.com" 
-                      target="_blank" 
+                    <a
+                      href="https://facebook.com"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-primary transition-colors"
                     >
                       <Facebook className="w-6 h-6" />
                     </a>
-                    <a 
-                      href="https://twitter.com" 
-                      target="_blank" 
+                    <a
+                      href="https://twitter.com"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-primary transition-colors"
                     >
@@ -314,7 +345,7 @@ const Checkout = () => {
           <DialogHeader>
             <DialogTitle>Shipping Details</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -338,7 +369,11 @@ const Checkout = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="your@email.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="your@email.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -352,7 +387,11 @@ const Checkout = () => {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                     <div className="flex gap-2 text-sm justify-center items-center"> +91 <Input type="tel" placeholder="1234567890" {...field} /></div>
+                      <div className="flex gap-2 text-sm justify-center items-center">
+                        {" "}
+                        +91{" "}
+                        <Input type="tel" placeholder="1234567890" {...field} />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -366,10 +405,10 @@ const Checkout = () => {
                   <FormItem>
                     <FormLabel>Shipping Address</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Enter your complete shipping address" 
+                      <Textarea
+                        placeholder="Enter your complete shipping address"
                         className="resize-none"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -384,7 +423,11 @@ const Checkout = () => {
                   <FormItem>
                     <FormLabel>Pincode</FormLabel>
                     <FormControl>
-                      <Input type="text" placeholder="Enter your pincode" {...field} />
+                      <Input
+                        type="text"
+                        placeholder="Enter your pincode"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -392,7 +435,13 @@ const Checkout = () => {
               />
 
               <Button type="submit" className="w-full hover-glow">
-                Place Order
+                {loading ? (
+                  <div className="flex justify-center items-center">
+                    <div className="spinner-border animate-spin border-2 border-t-2 border-gray-300 rounded-full w-6 h-6" />
+                  </div>
+                ) : (
+                  "Place Order"
+                )}
               </Button>
             </form>
           </Form>
@@ -402,28 +451,30 @@ const Checkout = () => {
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-2xl">Order Placed Successfully! 🎉</DialogTitle>
+            <DialogTitle className="text-center text-2xl">
+              Order Placed Successfully! 🎉
+            </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="flex justify-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg 
-                  className="w-8 h-8 text-green-600" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M5 13l4 4L19 7" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
               </div>
             </div>
-            
+
             <div className="text-center space-y-2">
               <p className="text-lg font-semibold">
                 Thank you, {customerName}!
@@ -436,11 +487,11 @@ const Checkout = () => {
               </p>
             </div>
 
-            <Button 
+            <Button
               onClick={() => {
                 setShowSuccessModal(false);
                 navigate("/shop");
-              }} 
+              }}
               className="w-full"
             >
               Continue Shopping
