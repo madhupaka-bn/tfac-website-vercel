@@ -32,6 +32,7 @@ const shippingSchema = z.object({
   email: z.string().trim().email("Invalid email address"),
   phone: z.string().trim().min(10, "Phone number must be at least 10 digits").max(15, "Phone number must be less than 15 digits"),
   address: z.string().trim().min(10, "Please provide a complete address").max(500, "Address must be less than 500 characters"),
+  pincode: z.string().trim().min(6, "Pincode must be at least 6 digits").max(6, "Pincode must be exactly 6 digits"),
 });
 
 const Checkout = () => {
@@ -50,6 +51,7 @@ const Checkout = () => {
       email: "",
       phone: "",
       address: "",
+      pincode: "",
     },
   });
 
@@ -63,67 +65,94 @@ const Checkout = () => {
 
   const onSubmit = async (data: z.infer<typeof shippingSchema>) => {
   try {
+    const orderBody = {
+      customer_name: data.name,
+      customer_email: data.email,
+      customer_phone: data.phone,
+      customer_address: data.address,
+      customer_pincode: data.pincode,
+      product_name: product.name,
+      product_size: product.size,
+      product_price: product.price,
+      product_image: product.image,
+      product_cause: product.cause,
+      order_quantity: 1,
+    };
 
-    // Call backend to create order
-    const order = await createOrder(total);
+    console.log(orderBody, "ORDER BODY");
 
-    // 2️⃣ Razorpay Checkout (No verification now)
+    // 1️⃣ Create Razorpay Order from Backend
+    const response = await createOrder(orderBody); // axios request
+
+    const backendOrder = response.data.order;
+    const orderId = response.data.orderId; // DB order ID
+    const customerId = response.data.customerId;
+
+    console.log("BACKEND ORDER:", backendOrder);
+
+    // 2️⃣ Configure Razorpay Checkout
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: order.amount,
-      currency: order.currency,
+      amount: backendOrder.amount,
+      currency: backendOrder.currency,
       name: "Tees for a Cause",
-      description: "T-shirt Order Payment",
-      handler: function (response) {
+      description: backendOrder.notes.product_name,
+      order_id: backendOrder.id, // Razorpay order_id
+
+      handler: async function (rzpResponse: any) {
+        console.log("PAYMENT SUCCESS:", rzpResponse);
+
+        // 3️⃣ Verify payment on backend
+        await verifyPayment({ razorpay_payment_id: rzpResponse.razorpay_payment_id,
+          razorpay_order_id: rzpResponse.razorpay_order_id,
+          razorpay_signature: rzpResponse.razorpay_signature,
+          order_id: orderId }) ;// DB order id
+
         toast.dismiss();
         setCustomerName(data.name);
         setShowSuccessModal(true);
         form.reset();
       },
+
       modal: {
-        ondismiss: function() {
-          // User closed Razorpay modal without completing payment
+        ondismiss: function () {
           toast.info("Payment cancelled");
           setShowShippingForm(true);
         },
         backdropclose: true,
         escape: true,
       },
+
       prefill: {
         name: data.name,
         email: data.email,
         contact: data.phone,
       },
-      notes: {
-        address: data.address,
-        size: product?.size,
-        product_name: product?.name,
-        cause:product?.cause || "",
-      },
+
+      notes: backendOrder.notes,
+
       theme: {
         color: "#1E3A8A",
       },
     };
 
+    // 3️⃣ Launch Razorpay Checkout
     const rzp1 = new window.Razorpay(options);
-    
-    // Close shipping form and remove any backdrop overlays
+
+    // Close shipping form
     setShowShippingForm(false);
-    
-    // Wait for dialog to fully close and remove backdrop
+
+    // Ensure backdrop removed
     setTimeout(() => {
-      // Remove any lingering dialog backdrops
-      const backdrops = document.querySelectorAll('[data-radix-dialog-overlay]');
-      backdrops.forEach(backdrop => backdrop.style.display = 'none');
-      
+      const backdrops = document.querySelectorAll("[data-radix-dialog-overlay]");
+      backdrops.forEach((b: any) => (b.style.display = "none"));
+
       rzp1.open();
-      
-      // Ensure Razorpay modal is on top and interactive
+
+      // Ensure Razorpay modal appears above everything
       setTimeout(() => {
-        const razorpayContainer = document.querySelector('.razorpay-container');
-        if (razorpayContainer) {
-          razorpayContainer.style.zIndex = '9999999';
-        }
+        const rzpContainer = document.querySelector(".razorpay-container") as HTMLElement;
+        if (rzpContainer) rzpContainer.style.zIndex = "9999999";
       }, 100);
     }, 300);
 
@@ -133,6 +162,7 @@ const Checkout = () => {
     toast.error("Something went wrong!");
   }
 };
+
 
   const originalPrice = 699;
   const discount = 110;
@@ -322,7 +352,7 @@ const Checkout = () => {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="1234567890" {...field} />
+                     <div className="flex gap-2 text-sm justify-center items-center"> +91 <Input type="tel" placeholder="1234567890" {...field} /></div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -341,6 +371,20 @@ const Checkout = () => {
                         className="resize-none"
                         {...field} 
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pincode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pincode</FormLabel>
+                    <FormControl>
+                      <Input type="text" placeholder="Enter your pincode" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
